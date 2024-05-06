@@ -1,0 +1,8 @@
+node_modules/
+venv/
+*.pyc
+.DS_Store
+# If you use a database file, consider excluding it
+# db.sqlite3
+# Docker volumes
+data/
