@@ -7,6 +7,7 @@ WORKDIR /server
 # Install Flask
 RUN pip install Flask
 RUN pip install flask-pymongo
+RUN pip install flask-cors
 
 # Copy the current directory contents into the container at /server
 COPY . /server
