@@ -19,5 +19,32 @@ def get_recently_played(steam_id):
     else:
         return jsonify({'error': 'Failed to fetch data'}), response.status_code
 
+@app.route('/steam/games_genres/<steam_id>')
+def get_games_genres(steam_id):
+    # Fetch all games owned by the user
+    games_response = requests.get(f'http://api.steampowered.com/IPlayerService/GetOwnedGames/v0001/?key={steam_api_key}&steamid={steam_id}&include_appinfo=true&format=json')
+    print("Games Retrieved")
+    games_data = games_response.json()['response']['games']
+
+    # Fetch genres for each game using Steam's store API
+    games_with_genres = []
+    for game in games_data:
+        # Check if detailed game information including genres is already included
+        if 'genre' in game:
+            genres = game['genre']
+        else:
+            # Fetch additional game details to get the genres
+            game_details_response = requests.get(f'http://store.steampowered.com/api/appdetails?appids={game["appid"]}&filters=genres')
+            game_details = game_details_response.json()[str(game["appid"])]
+            if game_details['success']:
+                genres = [genre['description'] for genre in game_details['data'].get('genres', [])]
+            else:
+                genres = ['Unknown']
+        
+        game['genres'] = genres
+        games_with_genres.append(game)
+
+    return jsonify(games_with_genres)
+
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0')

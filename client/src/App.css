@@ -1,24 +1,15 @@
-body {
-  font-family: Arial, sans-serif; /* Sets a nice, readable font */
-  background-color: #f4f4f9; /* Light grey background */
-  color: #333; /* Dark grey text */
-  margin: 0;
-  padding: 0;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  height: 100vh; /* Full viewport height */
-}
-
 .App-header {
   text-align: center;
   width: 90%;
-  max-width: 600px; /* Maximum width of the content */
+  max-width: 800px; /* Keep the maximum width */
+  height: auto; /* Make height adjust to content */
+  min-height: 650px; /* Set a minimum height to ensure there is enough space */
   margin: auto;
   padding: 20px;
+  padding-bottom: 40px; /* Maybe increase if still required */
   background-color: #fff;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1); /* Adds a subtle shadow to the content area */
-  border-radius: 8px; /* Rounded corners */
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  border-radius: 8px;
 }
 
 input[type="text"], button {
@@ -26,17 +17,13 @@ input[type="text"], button {
   margin: 5px;
   border: 2px solid #ddd;
   border-radius: 4px;
-  transition: border-color 0.3s;
-}
-
-input[type="text"]:focus, button:focus {
-  border-color: #0056b3; /* Blue border for focus */
+  width: 200px; /* Standardize width for text input */
 }
 
 button {
-  background-color: #007bff; /* Bootstrap's primary button color */
+  background-color: #007bff;
   color: white;
-  cursor: pointer; /* Pointer cursor on hover */
+  cursor: pointer;
 }
 
 button:hover {
@@ -44,14 +31,37 @@ button:hover {
 }
 
 ul {
-  list-style-type: none; /* Removes bullet points from the list */
+  list-style-type: none;
   padding: 0;
 }
 
 li {
-  background-color: #f8f9fa; /* Light background for each list item */
-  border: 1px solid #dee2e6; /* A subtle border for the items */
+  background-color: #f8f9fa;
+  border: 1px solid #dee2e6;
   padding: 10px;
   margin-top: 8px;
-  border-radius: 4px; /* Rounded corners for list items */
+  border-radius: 4px;
+}
+
+.Chart-container {
+  display: flex;
+  flex-direction: column; /* Stacks children vertically */
+  align-items: center; /* Centers items horizontally in the container */
+  margin-top: 20px; /* Adds some space above the chart area */
+}
+
+.PieChart {
+  width: 100%; /* Allows the PieChart to fill the container */
+  max-width: 400px; /* Restricts the width of the PieChart */
+  align-self: start; /* Aligns the pie chart to the start of the flex container */
+}
+
+.Legend-box {
+  width: 100%; /* Takes the full width of the container */
+  background-color: #f8f9fa; /* Light background for the legend */
+  padding: 10px;
+  border-radius: 8px;
+  border: 1px solid #dee2e6; /* Adds a subtle border */
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1); /* Adds shadow for depth */
+  margin-top: 10px; /* Adds space between chart and legend */
 }
