@@ -2,74 +2,31 @@ import React, { useEffect, useState } from 'react';
 import './App.css';
 
 function App() {
-  const [gameName, setGameName] = useState('');
+  const [steamId, setSteamId] = useState('');
   const [games, setGames] = useState([]);
 
-  useEffect(() => {
-    fetch('http://localhost:5000/games')
+  const fetchRecentlyPlayed = () => {
+    fetch(`http://localhost:5000/steam/recently_played/${steamId}`)
       .then(response => response.json())
-      .then(data => setGames(data))
-      .catch(error => console.error('Error fetching games:', error));
-  }, []);
-
-  const handleInputChange = (e) => {
-    setGameName(e.target.value);
-  };
-
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    fetch('http://localhost:5000/games/add', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ name: gameName }),
-    })
-      .then(response => response.json())
-      .then(data => {
-        alert('Game added successfully');
-        setGames([...games, { name: gameName }]);
-        setGameName('');
-      })
-      .catch(error => console.error('Error adding game:', error));
-  };
-
-  const handleDelete = (gameName) => {
-    fetch('http://localhost:5000/games/delete', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ name: gameName }),
-    })
-      .then(response => response.json())
-      .then(data => {
-        alert(data.message);
-        if (data.message === "Game deleted successfully") {
-          setGames(games.filter(game => game.name !== gameName));
-        }
-      })
-      .catch(error => console.error('Error deleting game:', error));
+      .then(data => setGames(data.response.games))
+      .catch(error => console.error('Error fetching Steam games:', error));
   };
 
   return (
     <div className="App">
       <header className="App-header">
-        <form onSubmit={handleSubmit}>
-          <input
-            type="text"
-            value={gameName}
-            onChange={handleInputChange}
-            placeholder="Enter game name"
-            required
-          />
-          <button type="submit">Add Game</button>
-        </form>
-        <h2>Games List</h2>
+        <input
+          type="text"
+          value={steamId}
+          onChange={e => setSteamId(e.target.value)}
+          placeholder="Enter Steam ID"
+        />
+        <button onClick={fetchRecentlyPlayed}>Fetch Games</button>
+        <h2>Recently Played Games</h2>
         <ul>
-          {games.map((game, index) => (
-            <li key={index}>
-              {game.name} <button onClick={() => handleDelete(game.name)}>Delete</button>
+          {games.map(game => (
+            <li key={game.appid}>
+              {game.name} - Played {game.playtime_2weeks} minutes in last 2 weeks
             </li>
           ))}
         </ul>

@@ -1,32 +1,23 @@
 from flask import Flask, jsonify, request
 from flask_pymongo import PyMongo
 from flask_cors import CORS
+import requests
+
+steam_api_key = '2220FF15666E1F4D56AD642BACA6A786'
 
 app = Flask(__name__)
 app.config["MONGO_URI"] = "mongodb://mongo:27017/SteamDB"
 mongo = PyMongo(app)
 CORS(app)
 
-@app.route('/games/add', methods=['POST'])
-def add_game():
-    game_name = request.json['name']
-    mongo.db.games.insert_one({'name': game_name})
-    return jsonify(message="Game added successfully"), 201
-
-@app.route('/games/delete', methods=['POST'])
-def delete_game():
-    game_name = request.json['name']
-    result = mongo.db.games.delete_one({'name': game_name})
-    if result.deleted_count > 0:
-        return jsonify(message="Game deleted successfully"), 200
+@app.route('/steam/recently_played/<steam_id>')
+def get_recently_played(steam_id):
+    url = f'http://api.steampowered.com/IPlayerService/GetRecentlyPlayedGames/v0001/?key={steam_api_key}&steamid={steam_id}&format=json'
+    response = requests.get(url)
+    if response.status_code == 200:
+        return jsonify(response.json())
     else:
-        return jsonify(message="No game found with that name"), 404
-
-@app.route('/games')
-def get_games():
-    games = mongo.db.games.find()
-    games_list = [{'name': game['name']} for game in games]
-    return jsonify(games_list)
+        return jsonify({'error': 'Failed to fetch data'}), response.status_code
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0')
