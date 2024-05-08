@@ -1,7 +1,12 @@
 from flask import Flask, jsonify, request
 from flask_pymongo import PyMongo
 from flask_cors import CORS
+from requests.exceptions import Timeout, RequestException
 import requests
+import logging
+
+# Setup basic configuration for logging
+logging.basicConfig(level=logging.INFO)
 
 steam_api_key = '2220FF15666E1F4D56AD642BACA6A786'
 
@@ -16,31 +21,40 @@ def get_recently_played(steam_id):
     games_data = response.json()['response']['games']
     return jsonify(games_data)
 
+def fetch_game_details(appid):
+    url = f'http://store.steampowered.com/api/appdetails?appids={appid}&filters=genres'
+    try:
+        response = requests.get(url, timeout=10)  # 10 seconds timeout
+        response.raise_for_status()
+        return response.json()
+    except Timeout:
+        logging.error(f"Request timed out for AppID: {appid}")
+    except RequestException as e:
+        logging.error(f"Request failed for AppID: {appid}, Error: {e}")
+    return None
+
 @app.route('/steam/all_games_genres/<steam_id>')
 def get_games_genres(steam_id):
-    # Fetch all games owned by the user
     games_response = requests.get(f'http://api.steampowered.com/IPlayerService/GetOwnedGames/v0001/?key={steam_api_key}&steamid={steam_id}&include_appinfo=true&format=json')
-    print("Games Retrieved")
     games_data = games_response.json()['response']['games']
 
-    # Fetch genres for each game using Steam's store API
     games_with_genres = []
     for game in games_data:
-        # Check if detailed game information including genres is already included
-        if 'genre' in game:
-            genres = game['genre']
+        logging.info(f"Processing game {game['name']} (AppID: {game['appid']})")
+        game_record = mongo.db.games.find_one({'appid': game['appid']})
+        if game_record:
+            game['genres'] = game_record['genres']
         else:
-            # Fetch additional game details to get the genres
-            game_details_response = requests.get(f'http://store.steampowered.com/api/appdetails?appids={game["appid"]}&filters=genres')
-            game_details = game_details_response.json()[str(game["appid"])]
-            if game_details['success']:
-                genres = [genre['description'] for genre in game_details['data'].get('genres', [])]
+            game_details = fetch_game_details(game['appid'])
+            if game_details and game_details[str(game['appid'])]['success']:
+                if(game_details[str(game['appid'])]['data'] != []):
+                    genres = [genre['description'] for genre in game_details[str(game['appid'])]['data'].get('genres', [])]
+                    game['genres'] = genres
+                    mongo.db.games.insert_one({'appid': game['appid'], 'genres': genres})
             else:
-                genres = ['Unknown']
-        
-        game['genres'] = genres
+                game['genres'] = ['Unknown']
         games_with_genres.append(game)
-
+    logging.info(f"Finished Processing Games")
     return jsonify(games_with_genres)
 
 if __name__ == '__main__':
