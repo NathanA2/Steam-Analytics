@@ -43,25 +43,10 @@ li {
   border-radius: 4px;
 }
 
-.Chart-container {
+.PieChart-container {
   display: flex;
-  flex-direction: column; /* Stacks children vertically */
-  align-items: center; /* Centers items horizontally in the container */
-  margin-top: 20px; /* Adds some space above the chart area */
-}
-
-.PieChart {
-  width: 100%; /* Allows the PieChart to fill the container */
-  max-width: 400px; /* Restricts the width of the PieChart */
-  align-self: start; /* Aligns the pie chart to the start of the flex container */
-}
-
-.Legend-box {
-  width: 100%; /* Takes the full width of the container */
-  background-color: #f8f9fa; /* Light background for the legend */
-  padding: 10px;
-  border-radius: 8px;
-  border: 1px solid #dee2e6; /* Adds a subtle border */
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1); /* Adds shadow for depth */
-  margin-top: 10px; /* Adds space between chart and legend */
+  justify-content: center; /* This centers the child horizontally */
+  align-items: center; /* This centers the child vertically */
+  height: 400px; /* Adjust height as needed */
+  margin-top: 20px; /* Adds some space above the chart */
 }

@@ -12,14 +12,11 @@ CORS(app)
 
 @app.route('/steam/recently_played/<steam_id>')
 def get_recently_played(steam_id):
-    url = f'http://api.steampowered.com/IPlayerService/GetRecentlyPlayedGames/v0001/?key={steam_api_key}&steamid={steam_id}&format=json'
-    response = requests.get(url)
-    if response.status_code == 200:
-        return jsonify(response.json())
-    else:
-        return jsonify({'error': 'Failed to fetch data'}), response.status_code
+    response = requests.get(f'http://api.steampowered.com/IPlayerService/GetRecentlyPlayedGames/v0001/?key={steam_api_key}&steamid={steam_id}&format=json')
+    games_data = response.json()['response']['games']
+    return jsonify(games_data)
 
-@app.route('/steam/games_genres/<steam_id>')
+@app.route('/steam/all_games_genres/<steam_id>')
 def get_games_genres(steam_id):
     # Fetch all games owned by the user
     games_response = requests.get(f'http://api.steampowered.com/IPlayerService/GetOwnedGames/v0001/?key={steam_api_key}&steamid={steam_id}&include_appinfo=true&format=json')
