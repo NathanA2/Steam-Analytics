@@ -6,21 +6,17 @@ function App() {
   const [steamId, setSteamId] = useState('');
   const [recentGames, setRecentGames] = useState([]);
   const [allGames, setAllGames] = useState([]);
-  const [topAllTimeGames, setTopAllTimeGames] = useState([]);
-  const [displayInHours, setDisplayInHours] = useState(true);
+  const [displayMode, setDisplayMode] = useState('hours'); // "hours", "minutes", "percentage"
   const [loading, setLoading] = useState(false);
-  const [dataFetched, setDataFetched] = useState(false);
-  const [darkMode, setDarkMode] = useState(false);
+  const [darkMode, setDarkMode] = useState(true);
+  const [totalPlaytime, setTotalPlaytime] = useState(0);
 
   const fetchRecentGames = () => {
     setLoading(true);
     fetch(`http://localhost:5000/steam/recently_played/${steamId}`)
       .then(response => response.json())
       .then(data => {
-        setDataFetched(true);
-        // Sort games by playtime in the last 2 weeks and take the top 3
-        const topRecentGames = data.sort((a, b) => b.playtime_2weeks - a.playtime_2weeks).slice(0, 3);
-        setRecentGames(topRecentGames);
+        setRecentGames(data);
       })
       .catch(error => console.error('Error fetching recent games:', error))
       .finally(() => setLoading(false));
@@ -32,9 +28,10 @@ function App() {
       .then(response => response.json())
       .then(data => {
         setAllGames(data);
-        // Sort games by total playtime and take the top 3
-        const topGames = data.sort((a, b) => b.playtime_forever - a.playtime_forever).slice(0, 3);
-        setTopAllTimeGames(topGames);
+
+        // Calculate the total playtime of all games
+        const total = data.reduce((sum, game) => sum + game.playtime_forever, 0);
+        setTotalPlaytime(total);
       })
       .catch(error => console.error('Error fetching all games genres:', error))
       .finally(() => setLoading(false));
@@ -44,10 +41,24 @@ function App() {
   const genreData = allGames.reduce((acc, game) => {
     game.genres.forEach(genre => {
       const found = acc.find(item => item.name === genre);
+      const playtime = game.playtime_forever;
+
       if (found) {
-        found.value += displayInHours ? game.playtime_forever / 60 : game.playtime_forever; // Convert minutes to hours if needed
+        if (displayMode === 'hours') {
+          found.value += playtime / 60; // Convert minutes to hours
+        } else if (displayMode === 'minutes') {
+          found.value += playtime;
+        } else if (displayMode === 'percentage') {
+          found.value += (playtime / totalPlaytime) * 100; // Calculate percentage of total time
+        }
       } else {
-        acc.push({ name: genre, value: displayInHours ? game.playtime_forever / 60 : game.playtime_forever }); // Initialize with the correct value
+        acc.push({
+          name: genre,
+          value:
+            displayMode === 'hours' ? playtime / 60 :
+            displayMode === 'minutes' ? playtime :
+            (playtime / totalPlaytime) * 100 // Initialize with appropriate value
+        });
       }
     });
     return acc;
@@ -82,7 +93,7 @@ function App() {
           style={{ backgroundColor: darkMode ? '#333333' : '#ffffff', color: darkMode ? '#ffffff' : '#000000' }}
         />
         <button onClick={() => { fetchRecentGames(); fetchAllGamesGenres(); }} style={{ backgroundColor: darkMode ? '#444444' : '#007bff', color: darkMode ? '#ffffff' : '#ffffff' }}>Fetch Games</button>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', justifyContent: 'center' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', justifyContent: 'center', marginTop: '10px' }}>
           <label>
             <input
               type="checkbox"
@@ -92,50 +103,76 @@ function App() {
             Dark Mode
           </label>
           <label>
-            <input
-              type="checkbox"
-              checked={displayInHours}
-              onChange={() => setDisplayInHours(!displayInHours)}
-            />
-            Display in Hours
+            Display Mode:
+            <select value={displayMode} onChange={e => setDisplayMode(e.target.value)} style={{ marginLeft: '10px' }}>
+              <option value="hours">Hours</option>
+              <option value="minutes">Minutes</option>
+              <option value="percentage">Percentage</option>
+            </select>
           </label>
         </div>
-        <div className="TopGames-container" style={{ display: 'flex', justifyContent: 'space-between' }}>
-          <div className="TopGames-list" style={{ marginRight: '20px', backgroundColor: darkMode ? '#1e1e1e' : '#ffffff', padding: '10px', borderRadius: '8px' }}>
-            <h2>Top Three Most Played Games in Last Two Weeks</h2>
-            <ul>
-              {dataFetched && recentGames.length === 0 ? (
-                Array.from({ length: 3 }).map((_, index) => (
-                  <li key={`placeholder-${index}`} style={{ backgroundColor: darkMode ? '#2e2e2e' : '#f8f9fa', padding: '10px', margin: '5px 0', borderRadius: '4px' }}>No games played recently</li>
-                ))
-              ) : recentGames.length > 0 ? (
-                recentGames.map(game => (
-                  <li key={game.appid} style={{ backgroundColor: darkMode ? '#2e2e2e' : '#f8f9fa', padding: '10px', margin: '5px 0', borderRadius: '4px' }}>
-                    {game.name} - {displayInHours ? (game.playtime_2weeks / 60).toFixed(2) : game.playtime_2weeks} {displayInHours ? 'hours' : 'minutes'}
-                  </li>
-                ))
-              ) : (
-                Array.from({ length: 3 }).map((_, index) => (
-                  <li key={`placeholder-${index}`} style={{ backgroundColor: darkMode ? '#2e2e2e' : '#f8f9fa', padding: '10px', margin: '5px 0', borderRadius: '4px' }}>No data available</li>
-                ))
-              )}
-            </ul>
+
+        <div className="TotalPlaytime" style={{ marginTop: '20px', backgroundColor: darkMode ? '#1e1e1e' : '#ffffff', padding: '10px', borderRadius: '8px' }}>
+          <h2>Total Playtime Across All Games</h2>
+          <p>
+            {
+              displayMode === 'minutes' ? totalPlaytime :
+              displayMode === 'percentage' ? '100%' :
+              (totalPlaytime / 60).toFixed(2) + ' hours'
+            }
+          </p>
+        </div>
+
+        <div className="TopGames-container" style={{ display: 'flex', justifyContent: 'space-between', marginTop: '20px', width: '100%' }}>
+          <div className="TopGames-list-container" style={{ width: '48%' }}>
+            <h2>Top Played Games in Last Two Weeks</h2>
+            <div className="TopGames-list" style={{ backgroundColor: darkMode ? '#1e1e1e' : '#ffffff', padding: '10px', borderRadius: '8px', height: '135px', overflowY: 'scroll' }}>
+              <ul style={{ listStyle: 'none', padding: '0', margin: '0' }}>
+                {recentGames.length > 0 ? (
+                  recentGames.map(game => {
+                    const playtime = displayMode === 'hours' ? (game.playtime_2weeks / 60).toFixed(2) :
+                      displayMode === 'minutes' ? game.playtime_2weeks :
+                      ((game.playtime_2weeks / totalPlaytime) * 100).toFixed(2);
+
+                    const unit = displayMode === 'percentage' ? '%' : (displayMode === 'hours' ? 'hours' : 'minutes');
+                    
+                    return (
+                      <li key={game.appid} style={{ backgroundColor: darkMode ? '#2e2e2e' : '#f8f9fa', padding: '10px', margin: '5px 0', borderRadius: '4px' }}>
+                        {game.name} - {playtime} {unit}
+                      </li>
+                    );
+                  })
+                ) : (
+                  <li style={{ backgroundColor: darkMode ? '#2e2e2e' : '#f8f9fa', padding: '10px', margin: '5px 0', borderRadius: '4px' }}>No games played recently</li>
+                )}
+              </ul>
+            </div>
           </div>
-          <div className="TopGames-list" style={{ backgroundColor: darkMode ? '#1e1e1e' : '#ffffff', padding: '10px', borderRadius: '8px' }}>
-            <h2>Top Three Most Played Games of All Time</h2>
-            <ul>
-              {topAllTimeGames.length > 0 ? (
-                topAllTimeGames.map(game => (
-                  <li key={game.appid} style={{ backgroundColor: darkMode ? '#2e2e2e' : '#f8f9fa', padding: '10px', margin: '5px 0', borderRadius: '4px' }}>
-                    {game.name} - {displayInHours ? (game.playtime_forever / 60).toFixed(2) : game.playtime_forever} {displayInHours ? 'hours' : 'minutes'}
-                  </li>
-                ))
-              ) : (
-                Array.from({ length: 3 }).map((_, index) => (
-                  <li key={`placeholder-${index}`} style={{ backgroundColor: darkMode ? '#2e2e2e' : '#f8f9fa', padding: '10px', margin: '5px 0', borderRadius: '4px' }}>No data available</li>
-                ))
-              )}
-            </ul>
+          <div className="TopGames-list-container" style={{ width: '48%' }}>
+            <h2>Top Played Games of All Time</h2>
+            <div className="TopGames-list" style={{ backgroundColor: darkMode ? '#1e1e1e' : '#ffffff', padding: '10px', borderRadius: '8px', height: '135px', overflowY: 'scroll' }}>
+              <ul style={{ listStyle: 'none', padding: '0', margin: '0' }}>
+                {allGames.length > 0 ? (
+                  allGames
+                    .sort((a, b) => b.playtime_forever - a.playtime_forever)
+                    .map(game => {
+                      const playtime = displayMode === 'hours' ? (game.playtime_forever / 60).toFixed(2) :
+                        displayMode === 'minutes' ? game.playtime_forever :
+                        ((game.playtime_forever / totalPlaytime) * 100).toFixed(2);
+
+                      const unit = displayMode === 'percentage' ? '%' : (displayMode === 'hours' ? 'hours' : 'minutes');
+                      
+                      return (
+                        <li key={game.appid} style={{ backgroundColor: darkMode ? '#2e2e2e' : '#f8f9fa', padding: '10px', margin: '5px 0', borderRadius: '4px' }}>
+                          {game.name} - {playtime} {unit}
+                        </li>
+                      );
+                    })
+                ) : (
+                  <li style={{ backgroundColor: darkMode ? '#2e2e2e' : '#f8f9fa', padding: '10px', margin: '5px 0', borderRadius: '4px' }}>No data available</li>
+                )}
+              </ul>
+            </div>
           </div>
         </div>
         <h2>Genre Distribution by Playtime</h2>
@@ -150,7 +187,10 @@ function App() {
                 <Cell fill="#d3d3d3" />
               )}
             </Pie>
-            <Tooltip formatter={(value, name) => [`${value.toFixed(2)} ${displayInHours ? 'hours' : 'minutes'}`, `Genre: ${name}`]} />
+            <Tooltip formatter={(value, name) => [
+              displayMode === 'percentage' ? `${value.toFixed(2)}%` : `${value.toFixed(2)} ${displayMode}`,
+              `Genre: ${name}`
+            ]} />
           </PieChart>
         </div>
       </header>
