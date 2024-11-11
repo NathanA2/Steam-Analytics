@@ -6,10 +6,24 @@ function App() {
   const [steamId, setSteamId] = useState('');
   const [recentGames, setRecentGames] = useState([]);
   const [allGames, setAllGames] = useState([]);
+  const [recommendedGames, setRecommendedGames] = useState([]);
   const [displayMode, setDisplayMode] = useState('hours'); // "hours", "minutes", "percentage"
   const [loading, setLoading] = useState(false);
   const [darkMode, setDarkMode] = useState(true);
   const [totalPlaytime, setTotalPlaytime] = useState(0);
+
+  const cleanupGames = () => {
+    fetch('http://localhost:5000/steam/cleanup_games', {
+      method: 'POST',
+    })
+      .then(response => response.json())
+      .then(data => {
+        console.log('Cleanup completed:', data.message);
+      })
+      .catch(error => {
+        console.error('Error during cleanup:', error);
+      });
+  };
 
   const fetchRecentGames = () => {
     setLoading(true);
@@ -24,16 +38,28 @@ function App() {
 
   const fetchAllGamesGenres = () => {
     setLoading(true);
-    fetch(`http://localhost:5000/steam/all_games_genres/${steamId}`)
+    fetch(`http://localhost:5000/steam/all_games_genres/${steamId}`) // Change this line to gather all of Steam's game info.
       .then(response => response.json())
       .then(data => {
         setAllGames(data);
-
+  
         // Calculate the total playtime of all games
-        const total = data.reduce((sum, game) => sum + game.playtime_forever, 0);
+        const total = data.reduce((sum, game) => sum + (game.playtime_forever || 0), 0);
         setTotalPlaytime(total);
+        fetchRecommendedGames(); // Fetch recommended games after all games genres are loaded
       })
       .catch(error => console.error('Error fetching all games genres:', error))
+      .finally(() => setLoading(false));
+  };
+
+  const fetchRecommendedGames = () => {
+    setLoading(true);
+    fetch(`http://localhost:5000/steam/predict_games/${steamId}`)
+      .then(response => response.json())
+      .then(data => {
+        setRecommendedGames(data);
+      })
+      .catch(error => console.error('Error fetching recommended games:', error))
       .finally(() => setLoading(false));
   };
 
@@ -75,6 +101,7 @@ function App() {
   ];
 
   useEffect(() => {
+    cleanupGames();
     if (steamId) {
       fetchRecentGames();
       fetchAllGamesGenres();
@@ -126,7 +153,7 @@ function App() {
         <div className="TopGames-container" style={{ display: 'flex', justifyContent: 'space-between', marginTop: '20px', width: '100%' }}>
           <div className="TopGames-list-container" style={{ width: '48%' }}>
             <h2>Top Played Games in Last Two Weeks</h2>
-            <div className="TopGames-list" style={{ backgroundColor: darkMode ? '#1e1e1e' : '#ffffff', padding: '10px', borderRadius: '8px', height: '135px', overflowY: 'scroll' }}>
+            <div className="TopGames-list" style={{ backgroundColor: darkMode ? '#1e1e1e' : '#ffffff', padding: '10px', borderRadius: '8px', height: '200px', overflowY: 'scroll' }}>
               <ul style={{ listStyle: 'none', padding: '0', margin: '0' }}>
                 {recentGames.length > 0 ? (
                   recentGames.map(game => {
@@ -150,7 +177,7 @@ function App() {
           </div>
           <div className="TopGames-list-container" style={{ width: '48%' }}>
             <h2>Top Played Games of All Time</h2>
-            <div className="TopGames-list" style={{ backgroundColor: darkMode ? '#1e1e1e' : '#ffffff', padding: '10px', borderRadius: '8px', height: '135px', overflowY: 'scroll' }}>
+            <div className="TopGames-list" style={{ backgroundColor: darkMode ? '#1e1e1e' : '#ffffff', padding: '10px', borderRadius: '8px', height: '200px', overflowY: 'scroll' }}>
               <ul style={{ listStyle: 'none', padding: '0', margin: '0' }}>
                 {allGames.length > 0 ? (
                   allGames
@@ -164,7 +191,7 @@ function App() {
                       
                       return (
                         <li key={game.appid} style={{ backgroundColor: darkMode ? '#2e2e2e' : '#f8f9fa', padding: '10px', margin: '5px 0', borderRadius: '4px' }}>
-                          {game.name} - {playtime} {unit}
+                          {game.name} - {playtime} {unit} - Review Score: {game.review_score || 'N/A'}
                         </li>
                       );
                     })
@@ -192,6 +219,22 @@ function App() {
               `Genre: ${name}`
             ]} />
           </PieChart>
+        </div>
+
+        {/* Recommendations Section */}
+        <div className="Recommendations" style={{ marginTop: '20px', backgroundColor: darkMode ? '#1e1e1e' : '#ffffff', padding: '10px', borderRadius: '8px' }}>
+          <h2>Recommended Games</h2>
+          <ul style={{ listStyle: 'none', padding: '0', margin: '0' }}>
+            {recommendedGames.length > 0 ? (
+              recommendedGames.map((game, index) => (
+                <li key={index} style={{ backgroundColor: darkMode ? '#2e2e2e' : '#f8f9fa', padding: '10px', margin: '5px 0', borderRadius: '4px' }}>
+                  {game.name} - Predicted Playtime: {game.predicted_playtime.toFixed(2)} hours
+                </li>
+              ))
+            ) : (
+              <li style={{ backgroundColor: darkMode ? '#2e2e2e' : '#f8f9fa', padding: '10px', margin: '5px 0', borderRadius: '4px' }}>No recommendations available</li>
+            )}
+          </ul>
         </div>
       </header>
       <footer style={{ backgroundColor: darkMode ? '#1e1e1e' : '#ffffff', color: darkMode ? '#ffffff' : '#000000', padding: '10px', textAlign: 'center', marginTop: '20px' }}>

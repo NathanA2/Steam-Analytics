@@ -10,6 +10,9 @@ RUN pip install flask-pymongo
 RUN pip install flask-cors
 RUN pip install requests
 RUN pip install schedule
+RUN pip install numpy
+RUN pip install pandas
+RUN pip install scikit-learn
 
 # Copy the current directory contents into the container at /server
 COPY . /server
